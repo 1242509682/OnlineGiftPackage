@@ -4,7 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-        <AssemblyName>$(MSBuildProjectName) v1.0.8</AssemblyName>
+        <AssemblyName>$(MSBuildProjectName) v1.0.9</AssemblyName>
         <Platforms>AnyCPU;x64</Platforms>
     </PropertyGroup>
     <ItemGroup>
