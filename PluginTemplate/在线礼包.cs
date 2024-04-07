@@ -4,6 +4,8 @@ using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
 using TShockAPI.Hooks;
+using System.Collections.Concurrent;
+using System.Threading;
 
 // 插件命名空间
 namespace 在线礼包
@@ -19,88 +21,100 @@ namespace 在线礼包
         // 插件名称
         public override string Name => "在线礼包";
         // 插件版本号
-        public override Version Version => new Version(1, 0, 0, 9);
-        // 当前系统日期的天数
-        public static int Day = DateTime.Now.Day;
-        // 玩家在线时长字典，用于记录玩家在线时长（按天）
-        readonly Dictionary<string, int> players = new Dictionary<string, int>();
-        // 定时器实例，用于定期检查在线玩家并发放礼包
-        Timer timer;
-        // 配置文件加载实例
-        Config config;
+        public override Version Version => new Version(1, 0, 1, 0);
         // 构造函数，初始化插件与游戏关联
         public 在线礼包(Main game) : base(game)
         {
         }
+
+        // 当前系统日期的天数
+        public static int Day = DateTime.Now.Day;
+
+        // 定时器实例，用于定期检查在线玩家并发放礼包
+        Timer timer;
+
+        // 使用线程安全的字典存储玩家在线时长
+        private ConcurrentDictionary<string, int> players = new ConcurrentDictionary<string, int>();
+
+        // 配置文件加载实例
+        private static Configuration config; // 将config声明为静态字段
+
+        private object syncRoot = new object(); // 用于锁定发放礼包的临界区
+
         // 插件初始化方法
         public override void Initialize()
         {
-            // 加载或创建配置文件
-            config = Config.LoadOrCreateConfig();
+            // 调用LoadConfig方法获取配置实例并赋值给config
+            LoadConfig();
             // 注册命令，用于显示礼包获取概率
             Commands.ChatCommands.Add(new Command(GetProbability, "在线礼包"));
             // 监听服务器重载事件，以便在重载后重新设置定时器
-            TShockAPI.Hooks.GeneralHooks.ReloadEvent += GeneralHooks_ReloadEvent;
-            timer = new Timer(Timer_Elapsed, "", (int)config.触发时间.TotalMilliseconds, (int)config.触发时间.TotalMilliseconds);
+            TShockAPI.Hooks.GeneralHooks.ReloadEvent += ReloadEvent;
+            timer = new Timer(Timer_Elapsed, "", config.发放间隔 * 1000, config.发放间隔 * 1000); // 注意转换为毫秒
         }
+
+        //加载并创建配置文件
+        private static void LoadConfig()
+        {
+            //如果配置文件存在，只读不覆盖
+            if (File.Exists(Configuration.FilePath))
+            {
+                config = Configuration.Read(Configuration.FilePath);
+            }
+            // 如果配置文件不存在或加载失败，则创建并保存默认配置文件
+            else
+            {
+                config = Configuration.CreateDefaultConfig();
+                config.Write(Configuration.FilePath);
+            }
+        }
+
         // 重载事件处理程序
-        private void GeneralHooks_ReloadEvent(ReloadEventArgs e)
+        private void ReloadEvent(ReloadEventArgs e)
         {
-            // 重载配置文件
-            config = Config.LoadOrCreateConfig();
+            LoadConfig();
             // 更新定时器触发间隔
-            timer.Change(config.触发时间, config.触发时间);
+            timer.Change(config.发放间隔 * 1000, config.发放间隔 * 1000); // 注意转换为毫秒
+            Console.WriteLine($"已重载 [在线礼包] 配置文件,下次发放将在{config.发放间隔}秒后");
+            int totalProbability = config.CalculateTotalProbability();
+            Console.WriteLine($"所有礼包的总概率为：{totalProbability}");
         }
 
-        // 定时器回调方法，负责发放在线礼包
-        private void Timer_Elapsed(object state)
+        private void Timer_Elapsed(object? state)
         {
-            if (config.启用 == false)
+            lock (syncRoot)
             {
-                return;
-            }
-
-            // 如果日期改变，则清除玩家在线时长记录并更新当前日期
-            if (DateTime.Now.Day != Day)
-            {
-                Day = DateTime.Now.Day;
-                players.Clear();
-            }
-
-            // 遍历所有在线且已登录的玩家
-            for (int i = 0; i < TShock.Players.Length; i++)
-            {
-                var player = TShock.Players[i];
-
-                if (player == null || !player.Active || !player.IsLoggedIn)
+                // 获取当前日期，并清理在线时长记录（每天只在第一次执行时清空）
+                if (DateTime.Now.Day != Day)
                 {
-                    continue;
+                    Day = DateTime.Now.Day;
+                    players.Clear();
                 }
-                if (player.Active && player.IsLoggedIn)
-                {   // 跳过生命值大于等于2000的玩家
-                    if (player.TPlayer.statLifeMax >= 2000)
+
+                foreach (var player in TShock.Players.Where(p => p != null && p.Active && p.IsLoggedIn && p.TPlayer.statLifeMax < config.SkipStatLifeMax))
+                {
+                    if (!config.启用)
+                    {
+                        return;
+                    }
+
+                    // 记录或增加玩家在线时长
+                    players.AddOrUpdate(player.Name, 1, (_, currentCount) => currentCount + 1);
+
+                    // 跳过生命值大于多少的玩家
+                    if (player.TPlayer.statLifeMax >= config.SkipStatLifeMax)
                     {
                         continue;
                     }
 
-                    // 记录或增加玩家在线时长
-                    if (players.ContainsKey(player.Name) == false)
-                    {
-                        players[player.Name] = 0;
-                    }
-
-                    else
-                    {
-                        players[player.Name] += 1;
-                    }
-
                     // 根据玩家在线时长发放对应礼包
-                    if (config.触发序列.ContainsKey(players[player.Name]))
+                    if (players[player.Name] >= config.触发序列.Keys.Min())
                     {
                         Gift gift = RandGift();
                         if (gift == null)
                         {
-                            return;
+                            Console.WriteLine($"无法获取有效礼包，玩家 {player.Name} 的在线时长：{players[player.Name]} 秒");
+                            continue;
                         }
 
                         // 获取随机物品数量
@@ -109,13 +123,52 @@ namespace 在线礼包
                         // 给玩家发放物品
                         player.GiveItem(gift.物品ID, itemCount);
 
-                        // 发送提示消息给玩家
-                        player.SendMessage(string.Format(config.触发序列[players[player.Name]] + " [c/55CDFF:服主]送了个在线礼包 [i/s{2}:{1}]", players[player.Name], gift.物品ID, itemCount), Color.GreenYellow);
+                        // 构建礼包发放提示消息
+                        string playerMessageFormat = config.触发序列[players[player.Name]];
+                        string packageInfoMessage = string.Format(playerMessageFormat + " [i/s{0}:{1}] ", players[player.Name], gift.物品ID, itemCount);
 
-                        // 如果发放了礼包，重置该玩家的在线时长，以便下一次满足条件时发放下一个礼包
-                        players[player.Name] = 0;
+                        // 添加发放间隔信息
+                        int intervalForDisplay = config.发放间隔;
+                        string intervalMessage = $"下次发放将在{intervalForDisplay}秒后";
+
+                        // 合并两条消息
+                        string combinedMessage = $"{packageInfoMessage} {intervalMessage}";
+
+                        // 将合并后的消息发送给玩家
+                        player.SendMessage(combinedMessage, Color.GreenYellow);
+
+                        // 控制台输出
+                        if (config.每次发放礼包记录后台)
+                        {
+                            Console.WriteLine($"执行在线礼包发放任务，下次发放将在{config.发放间隔}秒后");
+                            int totalProbability = config.CalculateTotalProbability();
+                            Console.WriteLine($"所有礼包的总概率为：{totalProbability}");
+                        }
+
+                        // 发放成功后重置玩家在线时长
+                        players[player.Name] %= config.发放间隔;
+                    }
+                    else if (config.将未符合条件者记录后台)
+                    {
+                        Console.WriteLine($"玩家 {player.Name} 的在线时长：{players[player.Name]} 秒，未达到本次礼包发放条件");
+                        int totalProbability = config.CalculateTotalProbability();
+                        Console.WriteLine($"所有礼包的总概率为：{totalProbability}");
                     }
                 }
+            }
+        }
+
+        // 新增计算总概率的方法
+        public int CalculateTotalProbability()
+        {
+            if (config != null && config.礼包列表 != null)
+            {
+                return config.礼包列表.Sum(gift => gift.所占概率);
+            }
+            else
+            {
+                Console.WriteLine("无法计算总概率，因为配置尚未加载或礼包列表为空。");
+                return 0;
             }
         }
 
@@ -125,21 +178,24 @@ namespace 在线礼包
             // 异步任务显示礼包概率
             Task.Run(() =>
             {
+                StringBuilder sb = new StringBuilder();
+
                 // 分批显示礼包概率
                 for (int i = 0; i < config.礼包列表.Count; i += 10)
                 {
-                    StringBuilder sb = new StringBuilder();
-
-                    // 组装每批礼包的概率信息
                     for (int j = 0; j < 10 && i + j < config.礼包列表.Count; j++)
                     {
                         Gift gift = config.礼包列表[i + j];
                         sb.Append("[i/s1:{0}]:{1:0.##}% ".SFormat(gift.物品ID, 100.0 * ((double)gift.所占概率 / config.总概率)));
                     }
-
-                    // 发送给玩家
-                    args.Player.SendMessage(sb.ToString(), Color.Cornsilk);
                 }
+
+                // 计算并添加总概率信息
+                int totalProbability = config.CalculateTotalProbability();
+                sb.AppendLine($"所有礼包的总概率为：{totalProbability}%");
+
+                // 发送给玩家
+                args.Player.SendMessage(sb.ToString(), Color.Cornsilk);
             });
         }
 

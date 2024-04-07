@@ -1,109 +1,65 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using TShockAPI;
 
 namespace 在线礼包
 {
-    public class GiftConverter : JsonConverter
-    {
-        public override bool CanRead => true;
-        public override bool CanWrite => true;
-        public override bool CanConvert(Type objectType)
-        {
-            return typeof(Gift) == objectType;
-        }
-
-        // 优化 ReadJson 方法，加入异常处理和状态验证
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-        {
-            try
-            {
-                JObject giftObject = JObject.Load(reader);
-                Gift gift = new();
-
-                gift.物品名称 = (string)giftObject["物品名称"];
-                gift.物品ID = (int)giftObject["物品ID"];
-
-                JArray? 数量Array = giftObject["物品数量"] as JArray;
-                gift.物品数量 = new int[2];
-                gift.物品数量[0] = (int)数量Array[0];
-                gift.物品数量[1] = (int)数量Array[1];
-
-                gift.所占概率 = (int)giftObject["所占概率"];
-
-                return gift;
-            }
-            catch (Exception ex)
-            {
-                throw new JsonSerializationException($"无法反序列化Gift: {ex.Message}", ex);
-            }
-        }
-
-
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-        {
-            Gift gift = (Gift)value;
-
-            writer.WriteStartObject();
-            writer.WritePropertyName("物品名称");
-            writer.WriteValue(gift.物品名称);
-            writer.WritePropertyName("物品ID");
-            writer.WriteValue(gift.物品ID);
-            writer.WritePropertyName("物品数量");
-            writer.WriteStartArray();
-            writer.WriteValue(gift.物品数量[0]);
-            writer.WriteValue(gift.物品数量[1]);
-            writer.WriteEndArray();
-            writer.WritePropertyName("所占概率");
-            writer.WriteValue(gift.所占概率);
-            writer.WriteEndObject();
-        }
-    }
-
-    [JsonConverter(typeof(GiftConverter))]
-    public class Gift
-    {
-        [JsonProperty("物品名称")]
-        public string 物品名称 { get; set; }
-        [JsonProperty("物品ID")]
-        public int 物品ID { get; set; }
-        [JsonProperty("所占概率")]
-        public int 所占概率 { get; set; }
-        [JsonProperty("物品数量")]
-        public int[] 物品数量 { get; set; }
-
-    }
-
-
-    public class Config
+    public class Configuration
     {
         public bool 启用 { get; set; } = true;
         [JsonProperty("总概率")]
-        public int 总概率 = 100;
-        public TimeSpan 触发时间 { get; set; } = TimeSpan.FromSeconds(1800);
-        public Dictionary<int, string> 触发序列 { get; set; } = new Dictionary<int, string>();
+        public int 总概率 = 60;
+        [JsonProperty("发放间隔/秒")]
+        public int 发放间隔 { get; set; } = 1800; // 默认发放间隔为1800秒
+        [JsonProperty("跳过生命上限")]
+        public int SkipStatLifeMax { get; set; } = 500; // 默认值为2000
+        public bool 每次发放礼包记录后台 { get; set; } = true; // 默认为开启控制台输出
+        public bool 将未符合条件者记录后台 { get; set; } = false; // 默认为开启日志输出
         public List<Gift> 礼包列表 { get; set; } = new List<Gift>();
         // 添加一个计算总概率的方法
         public int CalculateTotalProbability() => 礼包列表.Sum(gift => gift.所占概率);
-        public static string path = Path.Combine(TShock.SavePath, "在线礼包.json");
-        public Config()
+        public Dictionary<int, string> 触发序列 { get; set; } = new Dictionary<int, string>();
+        public static readonly string FilePath = Path.Combine(TShock.SavePath, "在线礼包.json");
+
+        // 修改Write方法，使其可以接收外部传入的Configuration实例，也可以选择默认使用CreateConfig创建的实例
+        public void Write(string filePath)
         {
-            foreach (Gift gift in 礼包列表)
+
+            // 计算礼包列表总概率
+            总概率 = CalculateTotalProbability();
+
+            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Write))
+            using (var sw = new StreamWriter(fs))
             {
-                总概率 += gift.所占概率;
+                var json = JsonConvert.SerializeObject(this, Formatting.Indented);
+                sw.Write(json);
             }
         }
 
-        // 保存配置文件的方法
-        public static void SaveConfig(Config config)
+        // 修改Read方法，当文件不存在时，调用CreateConfig方法并返回新建的配置实例
+        public static Configuration Read(string filePath)
         {
-            string json = JsonConvert.SerializeObject(config, Formatting.Indented);
-            File.WriteAllText(Config.path, json);
+            Configuration config;
+
+            if (!File.Exists(filePath))
+            {
+                config = new Configuration(); // 返回默认配置
+            }
+            else
+            {
+                // 读取配置文件并返回一个Configuration实例
+                config = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(filePath));
+
+                // 计算并设置总概率
+                config.总概率 = config.CalculateTotalProbability();
+            }
+
+            return config; // 确保返回一个Configuration实例
         }
 
-        public static Config LoadOrCreateConfig()
+        //创建配置文件方法
+        internal static Configuration CreateDefaultConfig()
         {
-            Config config = new Config
+            Configuration config = new Configuration
             {
                 礼包列表 = new List<Gift>
         {
@@ -536,61 +492,15 @@ namespace 在线礼包
             foreach (Gift gift in config.礼包列表)
             {
                 //强制所有Gift的所占概率之和为100，则可以做如下操作：
-                 gift.所占概率 *= 100 / config.礼包列表.Sum(g => g.所占概率);
+                gift.所占概率 *= 100 / config.礼包列表.Sum(g => g.所占概率);
             }
 
             // 初始化触发序列，这里只有一条记录，可直接插入无需循环
-            for (int i = 1; i <= 5; i++)
+            for (int i = 1; i <= 200; i++)
             {
-                config.触发序列.Add(i * 1, $"你已获得{i}个礼包");
+                config.触发序列.Add(i * 1, $"[c/55CDFF:服主]送了你1个礼包");
             }
-
-
-            if (!File.Exists(path))
-            {
-                int totalProbability = config.CalculateTotalProbability();
-                Console.WriteLine($"所有礼包的总概率为：{totalProbability}");
-                File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented, new GiftConverter()));
-            }
-
-
-            // 序列化并写入文件时，使用触发时间的字符串形式
-            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented, new GiftConverter()));
             return config;
-        }
-
-
-        public static Gift SelectRandomGift(Config config)
-        {
-            Random random = new Random();
-            int randomNum = random.Next(0, config.CalculateTotalProbability());
-
-            Gift selectedGift = default!;
-            foreach (Gift gift in config.礼包列表)
-            {
-                randomNum -= gift.所占概率;
-                if (randomNum < 0)
-                {
-                    selectedGift = gift;
-                    break;
-                }
-            }
-
-            // 确保找到一个礼包（即使概率设置不正确），在这种情况下，至少返回列表中的第一个礼包
-            return selectedGift ?? config.礼包列表[0];
-        }
-
-
-        public static void Main(string[] args)
-        {
-            Config config = LoadOrCreateConfig();
-
-            // 序列化配置并同时写入文件
-            SaveConfig(config);
-
-            //发放一个随机礼包
-            Gift randomGift = SelectRandomGift(config);
-            Console.WriteLine($"发放的礼包为：{randomGift.物品名称}");
 
         }
     }
