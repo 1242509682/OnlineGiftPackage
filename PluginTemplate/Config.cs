@@ -129,6 +129,7 @@ namespace 在线礼包
                         物品数量 = new int[] { 3, 8 },
                         所占概率 = 3,
                     };
+                    config.礼包列表.Add(item3);
                     for (int i = 1; i <= 50; i++)
                     {
                         config.触发序列.Add(i * 1, $"你已获得{i}个礼包");
