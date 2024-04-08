@@ -1,11 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
+using System.Collections.Concurrent;
 using System.Text;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
 using TShockAPI.Hooks;
-using System.Collections.Concurrent;
-using System.Threading;
 
 // 插件命名空间
 namespace 在线礼包
@@ -21,7 +20,7 @@ namespace 在线礼包
         // 插件名称
         public override string Name => "在线礼包";
         // 插件版本号
-        public override Version Version => new Version(1, 0, 1, 0);
+        public override Version Version => new Version(1, 0, 1, 1);
         // 构造函数，初始化插件与游戏关联
         public 在线礼包(Main game) : base(game)
         {
@@ -37,7 +36,7 @@ namespace 在线礼包
         private ConcurrentDictionary<string, int> players = new ConcurrentDictionary<string, int>();
 
         // 配置文件加载实例
-        private static Configuration config; // 将config声明为静态字段
+        private static Configuration? config; // 将config声明为静态字段
 
         private object syncRoot = new object(); // 用于锁定发放礼包的临界区
 
@@ -54,12 +53,13 @@ namespace 在线礼包
         }
 
         //加载并创建配置文件
-        private static void LoadConfig()
+        private void LoadConfig()
         {
             //如果配置文件存在，只读不覆盖
             if (File.Exists(Configuration.FilePath))
             {
                 config = Configuration.Read(Configuration.FilePath);
+                config.CalculateTotalProbability();
             }
             // 如果配置文件不存在或加载失败，则创建并保存默认配置文件
             else
@@ -73,6 +73,10 @@ namespace 在线礼包
         private void ReloadEvent(ReloadEventArgs e)
         {
             LoadConfig();
+
+            // 调用UpdateTotalProbabilityOnReload方法来更新总概率
+            config.UpdateTotalProbabilityOnReload();
+
             // 更新定时器触发间隔
             timer.Change(config.发放间隔 * 1000, config.发放间隔 * 1000); // 注意转换为毫秒
             Console.WriteLine($"已重载 [在线礼包] 配置文件,下次发放将在{config.发放间隔}秒后");
@@ -148,55 +152,47 @@ namespace 在线礼包
                         // 发放成功后重置玩家在线时长
                         players[player.Name] %= config.发放间隔;
                     }
-                    else if (config.将未符合条件者记录后台)
-                    {
-                        Console.WriteLine($"玩家 {player.Name} 的在线时长：{players[player.Name]} 秒，未达到本次礼包发放条件");
-                        int totalProbability = config.CalculateTotalProbability();
-                        Console.WriteLine($"所有礼包的总概率为：{totalProbability}");
-                    }
                 }
-            }
-        }
-
-        // 新增计算总概率的方法
-        public int CalculateTotalProbability()
-        {
-            if (config != null && config.礼包列表 != null)
-            {
-                return config.礼包列表.Sum(gift => gift.所占概率);
-            }
-            else
-            {
-                Console.WriteLine("无法计算总概率，因为配置尚未加载或礼包列表为空。");
-                return 0;
             }
         }
 
         // 显示礼包获取概率的命令处理程序
         private void GetProbability(CommandArgs args)
         {
-            // 异步任务显示礼包概率
-            Task.Run(() =>
+            if (args.Player.HasPermission("在线礼包"))
             {
-                StringBuilder sb = new StringBuilder();
-
-                // 分批显示礼包概率
-                for (int i = 0; i < config.礼包列表.Count; i += 10)
+                Task.Run(() =>
                 {
-                    for (int j = 0; j < 10 && i + j < config.礼包列表.Count; j++)
+                    StringBuilder sb = new StringBuilder();
+
+                    // 添加标题行
+                    sb.AppendLine("在线礼包概率表：\n");
+
+                    // 显示所有礼包的获取概率，按每5个一组分批显示
+                    for (int i = 0; i < config.礼包列表.Count; i++)
                     {
-                        Gift gift = config.礼包列表[i + j];
+                        Gift gift = config.礼包列表[i];
                         sb.Append("[i/s1:{0}]:{1:0.##}% ".SFormat(gift.物品ID, 100.0 * ((double)gift.所占概率 / config.总概率)));
+
+                        // 每显示5个礼包后换行
+                        if ((i + 1) % 5 == 0)
+                        {
+                            sb.AppendLine();
+                        }
                     }
-                }
 
-                // 计算并添加总概率信息
-                int totalProbability = config.CalculateTotalProbability();
-                sb.AppendLine($"所有礼包的总概率为：{totalProbability}%");
+                    // 计算并添加总概率信息
+                    int totalProbability = config.CalculateTotalProbability();
+                    sb.AppendLine($"\n所有礼包的总概率为：{totalProbability}%");
 
-                // 发送给玩家
-                args.Player.SendMessage(sb.ToString(), Color.Cornsilk);
-            });
+                    // 发送给玩家
+                    args.Player.SendMessage(sb.ToString(), Color.Cornsilk);
+                });
+            }
+            else
+            {
+                args.Player.SendMessage("你没有足够的权限来查看礼包获取概率。", Color.Red); // 或者使用您的错误提示方式
+            }
         }
 
         // 随机选取礼包的方法

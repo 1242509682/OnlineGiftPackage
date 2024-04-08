@@ -6,17 +6,43 @@ namespace 在线礼包
     public class Configuration
     {
         public bool 启用 { get; set; } = true;
-        [JsonProperty("总概率")]
-        public int 总概率 = 60;
+
+        [JsonProperty("总概率(自动更新)")]
+        public int 总概率 { get; private set; } = 60; // 初始化一个默认值
+
+        // 新增计算总概率的方法
+        public int CalculateTotalProbability()
+        {
+            if (礼包列表 != null)
+            {
+                return 礼包列表.Sum(gift => gift.所占概率);
+            }
+            else
+            {
+                Console.WriteLine("无法计算总概率，因为礼包列表为空。");
+                return 0;
+            }
+        }
+
+        // Reload 自动设置总概率的方法
+        public void UpdateTotalProbabilityOnReload()
+        {
+            // 重新加载配置文件
+            var reloadedConfig = Configuration.Read(Configuration.FilePath);
+
+            // 设置总概率
+            总概率 = reloadedConfig.CalculateTotalProbability();
+            Write(Configuration.FilePath); // 将更新后的总概率写回配置文件
+        }
+
+
         [JsonProperty("发放间隔/秒")]
         public int 发放间隔 { get; set; } = 1800; // 默认发放间隔为1800秒
+
         [JsonProperty("跳过生命上限")]
         public int SkipStatLifeMax { get; set; } = 500; // 默认值为2000
-        public bool 每次发放礼包记录后台 { get; set; } = true; // 默认为开启控制台输出
-        public bool 将未符合条件者记录后台 { get; set; } = false; // 默认为开启日志输出
+        public bool 每次发放礼包记录后台 { get; set; } = false; // 默认为开启控制台输出
         public List<Gift> 礼包列表 { get; set; } = new List<Gift>();
-        // 添加一个计算总概率的方法
-        public int CalculateTotalProbability() => 礼包列表.Sum(gift => gift.所占概率);
         public Dictionary<int, string> 触发序列 { get; set; } = new Dictionary<int, string>();
         public static readonly string FilePath = Path.Combine(TShock.SavePath, "在线礼包.json");
 
@@ -48,11 +74,7 @@ namespace 在线礼包
             {
                 // 读取配置文件并返回一个Configuration实例
                 config = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(filePath));
-
-                // 计算并设置总概率
-                config.总概率 = config.CalculateTotalProbability();
             }
-
             return config; // 确保返回一个Configuration实例
         }
 
@@ -487,13 +509,6 @@ namespace 在线礼包
             },
         },
             };
-
-            // 如果需要将总概率限制为100，可以在加载完所有Gift后，根据实际情况调整所占概率
-            foreach (Gift gift in config.礼包列表)
-            {
-                //强制所有Gift的所占概率之和为100，则可以做如下操作：
-                gift.所占概率 *= 100 / config.礼包列表.Sum(g => g.所占概率);
-            }
 
             // 初始化触发序列，这里只有一条记录，可直接插入无需循环
             for (int i = 1; i <= 200; i++)
