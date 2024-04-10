@@ -11,7 +11,7 @@ namespace 在线礼包
 {
     // 插件使用TShockAPI v2.1
     [ApiVersion(2, 1)]
-    public class 在线礼包 : TerrariaPlugin
+    public class OnlineGiftPackage : TerrariaPlugin
     {
         // 插件作者信息
         public override string Author => "星夜神花 羽学适配";
@@ -22,7 +22,7 @@ namespace 在线礼包
         // 插件版本号
         public override Version Version => new Version(1, 0, 1, 1);
         // 构造函数，初始化插件与游戏关联
-        public 在线礼包(Main game) : base(game)
+        public OnlineGiftPackage(Main game) : base(game)
         {
         }
 
