@@ -1,0 +1,12 @@
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\HttpServer.dll
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\OnlineGift.deps.json
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\OnlineGift.dll
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\OnlineGift.pdb
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\OnlineGift.csproj.AssemblyReference.cache
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\OnlineGift.GeneratedMSBuildEditorConfig.editorconfig
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\OnlineGift.csproj.CoreCompileInputs.cache
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\OnlineGift.sourcelink.json
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\OnlineGift.dll
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\refint\OnlineGift.dll
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\OnlineGift.pdb
+d:\游戏\Terraria\服务器\插件源码\TShock 5 源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\ref\OnlineGift.dll

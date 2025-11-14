@@ -1,0 +1,19 @@
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\HttpServer.dll
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\在线礼包 v1.1.0.deps.json
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\在线礼包 v1.1.0.dll
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\在线礼包 v1.1.0.pdb
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\在线礼包.csproj.AssemblyReference.cache
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\在线礼包.GeneratedMSBuildEditorConfig.editorconfig
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\在线礼包.csproj.CoreCompileInputs.cache
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\在线礼包.sourcelink.json
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\在线礼包 v1.1.0.dll
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\refint\在线礼包 v1.1.0.dll
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\在线礼包 v1.1.0.pdb
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\ref\在线礼包 v1.1.0.dll
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\在线礼包 v1.1.1.deps.json
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\在线礼包 v1.1.1.dll
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\bin\Release\net6.0\在线礼包 v1.1.1.pdb
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\在线礼包 v1.1.1.dll
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\refint\在线礼包 v1.1.1.dll
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\在线礼包 v1.1.1.pdb
+d:\游戏\Terraria\服务器\插件源码\【在线礼包】TShock-Gift\OnlineGiftPackage\PluginTemplate\obj\Release\net6.0\ref\在线礼包 v1.1.1.dll
