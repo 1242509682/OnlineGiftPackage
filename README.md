@@ -3,7 +3,7 @@
 修改：羽学  
 插件来源：https://gitee.com/star-night-flower/tshock-gift  
   
-根据config里的【触发间隔】与【触发序列】随机发放【礼包列表】里的物品
+根据config里的【发放间隔】与【触发序列】随机发放【礼包列表】里的物品
 
 
 ## 命令
