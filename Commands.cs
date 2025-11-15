@@ -458,7 +458,7 @@ internal class Commands
                 var otherNames = aliases.Where(a => a != mainName).ToList();
                 if (otherNames.Count > 0)
                 {
-                    displayString += $" [c/AAAAAA:({string.Join(", ", otherNames)})]";
+                    displayString += $" ({string.Join(", ", otherNames)})";
                 }
             }
 

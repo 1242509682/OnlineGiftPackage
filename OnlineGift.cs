@@ -104,8 +104,14 @@ public class OnlineGift : TerrariaPlugin
         if (Config is null || !Config.Enabled) return;
 
         var plr = args.Player;
-        if (plr is null || !plr.Active || !plr.IsLoggedIn ||
-            plr.TPlayer.statLifeMax >= Config.SkipStatLifeMax) return;
+        if (plr is null || !plr.Active || !plr.IsLoggedIn) return;
+
+        if (Config.SkipStatLifeMax > 0 &&
+            !plr.HasPermission(Config.IsAdamin) &&
+            plr.TPlayer.statLifeMax >= Config.SkipStatLifeMax)
+        {
+            return;
+        }
 
         var stats = StatsManager.GetStats(plr);
         var elapsed = (DateTime.Now - stats.LastGiftSendTime).TotalSeconds;
