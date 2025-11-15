@@ -17,24 +17,43 @@ public class Configuration
     public int SkipStatLifeMax { get; set; } = 500;
     [JsonProperty("发放时的信息", Order = 5)]
     public string Text { get; set; } = $"[c/55CDFF:服务器]送了你1个在线礼包";
-    [JsonProperty("礼包列表", Order = 6)]
+
+    // 新增统计配置
+    [JsonProperty("启用统计功能", Order = 7)]
+    public bool EnableStats { get; set; } = true;
+    [JsonProperty("启用排行榜功能", Order = 8)]
+    public bool EnableLeaderboard { get; set; } = true;
+    [JsonProperty("排行榜显示数量", Order = 9)]
+    public int LeaderboardSize { get; set; } = 10;
+    
+      // 新增重置配置
+    [JsonProperty("重置时删除统计文件", Order = 10)]
+    public bool ResetDeleteStats { get; set; } = true;
+    [JsonProperty("重置时还原默认配置", Order = 11)]
+    public bool ResetToDefault { get; set; } = false;
+    
+    [JsonProperty("礼包列表", Order = 12)]
     public List<GiftData> GiftList { get; set; } = new List<GiftData>();
 
     #region 读取与创建配置文件方法
-    public static readonly string FilePath = Path.Combine(TShock.SavePath, "在线礼包.json");
+    public static readonly string FolderPath = Path.Combine(TShock.SavePath, "在线礼包");
+    public static readonly string FilePath = Path.Combine(TShock.SavePath, "在线礼包", "礼包配置.json");
+    
     public void Write()
     {
         Total = TotalRate();
+        Directory.CreateDirectory(FolderPath);
         var json = JsonConvert.SerializeObject(this, Formatting.Indented);
         File.WriteAllText(FilePath, json);
     }
+    
     public static Configuration Read()
     {
         if (!File.Exists(FilePath))
         {
             var NewConfig = new Configuration();
             NewConfig.SetDefault();
-            new Configuration().Write();
+            NewConfig.Write();
             return NewConfig;
         }
         else
@@ -72,6 +91,10 @@ public class Configuration
         Enabled = true;
         SendTimer = 1800;
         Text = $"[c/55CDFF:服务器]送了你1个在线礼包";
+        EnableStats = true;
+        EnableLeaderboard = true;
+        LeaderboardSize = 10;
+        ResetDeleteStats = true;
         GiftList = new List<GiftData>()
         {
             new GiftData("铂金币",74,1,new int[] { 2, 5 }),
@@ -101,7 +124,7 @@ public class Configuration
             new GiftData("生命水晶",29,1,new int[] { 2, 5 }),
             new GiftData("魔镜",50,1,new int[] { 1, 1 }),
             new GiftData("飞虫剑",5129,1,new int[] { 1, 1 }),
-            new GiftData("血泪",4271,1,new int[] { 1, 2 }),
+            new GiftData("血泪",4271,1,new int[] { 1, 2 },new List<string> { "血月" }),
             new GiftData("幸运马掌",158,1,new int[] { 1, 1 }),
             new GiftData("超亮头盔",4008,1,new int[] { 1, 1 }),
             new GiftData("非负重石",5391,1,new int[] { 1, 1 }),
@@ -121,9 +144,9 @@ public class Configuration
             new GiftData("月亮领主腿",5001,1,new int[] { 1,1 }),
             new GiftData("火把神的恩宠",5043,1,new int[] { 1,1 }),
             new GiftData("工匠面包",5326,1,new int[] { 1,1 }),
-            new GiftData("闭合的虚空袋",5325,1,new int[] { 1,1 }),
+            new GiftData("闭合的虚空袋",5325,1,new int[] { 1,1 },new List<string> { "骷髅王" }),
             new GiftData("先进战斗技术",4382,1,new int[] { 1,1 }),
-            new GiftData("先进战斗技术：卷二",5336,1,new int[] { 1,1 }),
+            new GiftData("先进战斗技术：卷二",5336,1,new int[] { 1,1 },new List<string> { "困难模式" }),
             new GiftData("闪电胡萝卜",4777,1,new int[] { 1,1 }),
             new GiftData("熔火护身符",4038,1,new int[] { 1,1 }),
             new GiftData("泰拉魔刃",4144,1,new int[] { 1,1 }),

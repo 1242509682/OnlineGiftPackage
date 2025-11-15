@@ -13,28 +13,30 @@ public class OnlineGift : TerrariaPlugin
     public override string Name => "在线礼包";
     public override string Author => "星夜神花 羽学重构";
     public override string Description => "在线礼包插件 ";
-    public override Version Version => new Version(1, 1, 2);
+    public override Version Version => new Version(1, 1, 3);
     #endregion
 
     #region 注册与卸载方法
-    public OnlineGift(Main game) : base(game){}
+    public OnlineGift(Main game) : base(game) { }
     public override void Initialize()
     {
         LoadConfig();
+        StatsManager.LoadAllStats(); // 加载所有玩家统计数据
         GeneralHooks.ReloadEvent += ReloadConfig;
-        ServerApi.Hooks.GameUpdate.Register(this, OnGameUpdate);
-        ServerApi.Hooks.NetGreetPlayer.Register(this, this.OnGreetPlayer);
-        ServerApi.Hooks.ServerLeave.Register(this, this.OnServerLeave);
+        GetDataHandlers.PlayerUpdate += OnPlayerUpdate!;
+        ServerApi.Hooks.NetGreetPlayer.Register(this, OnGreetPlayer);
+        ServerApi.Hooks.ServerLeave.Register(this, OnServerLeave);
         TShockAPI.Commands.ChatCommands.Add(new Command(new List<string> { "在线礼包", "gift" }, Commands.GiftCMD, "在线礼包", "gift"));
     }
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
+            StatsManager.SaveAllStats(); // 保存所有玩家统计数据
             GeneralHooks.ReloadEvent -= ReloadConfig;
-            ServerApi.Hooks.GameUpdate.Deregister(this, OnGameUpdate);
-            ServerApi.Hooks.NetGreetPlayer.Deregister(this, this.OnGreetPlayer);
-            ServerApi.Hooks.ServerLeave.Deregister(this, this.OnServerLeave);
+            GetDataHandlers.PlayerUpdate -= OnPlayerUpdate!;
+            ServerApi.Hooks.NetGreetPlayer.Deregister(this, OnGreetPlayer);
+            ServerApi.Hooks.ServerLeave.Deregister(this, OnServerLeave);
             TShockAPI.Commands.ChatCommands.RemoveAll(x => x.CommandDelegate == Commands.GiftCMD);
         }
         base.Dispose(disposing);
@@ -48,7 +50,7 @@ public class OnlineGift : TerrariaPlugin
         LoadConfig();
         Config?.UpdateTotalRate();
         args.Player.SendInfoMessage("[在线礼包]重新加载配置完毕。");
-        string nextTime = FormatTime(Config!.SendTimer * 60);
+        string nextTime = FormatTime(Config!.SendTimer);
         TShock.Utils.Broadcast($"当前发放礼包时间为:{nextTime}", color);
         TShock.Utils.Broadcast($"{Config.GiftList.Count}个礼包的总概率为:{Config.TotalRate()}", color);
     }
@@ -75,97 +77,115 @@ public class OnlineGift : TerrariaPlugin
     #endregion
 
     #region 初始化玩家数据方法
-    public static readonly Dictionary<int, int> players = new Dictionary<int, int>();
     private void OnGreetPlayer(GreetPlayerEventArgs args)
     {
         var plr = TShock.Players[args.Who];
         if (plr is null || !plr.Active || !plr.IsLoggedIn) return;
 
-        if (!players.ContainsKey(plr.Index))
-        {
-            players[plr.Index] = 0;
-        }
+        // 初始化玩家统计
+        StatsManager.UpdateStats(plr);
     }
+
     private void OnServerLeave(LeaveEventArgs args)
     {
         var plr = TShock.Players[args.Who];
-
-        if (players.ContainsKey(plr.Index))
+        if (plr != null)
         {
-            players.Remove(plr.Index);
+            // 保存玩家统计
+            StatsManager.SaveStats(plr);
         }
     }
     #endregion
 
-    #region 游戏更新事件
+    #region 玩家更新事件
     public static Color color = new Color(240, 250, 150);
-    private void OnGameUpdate(EventArgs args)
+    private void OnPlayerUpdate(object sender, GetDataHandlers.PlayerUpdateEventArgs args)
     {
         if (Config is null || !Config.Enabled) return;
 
-        var Players = new int[players.Count];
-        players.Keys.CopyTo(Players, 0);
+        var plr = args.Player;
+        if (plr is null || !plr.Active || !plr.IsLoggedIn ||
+            plr.TPlayer.statLifeMax >= Config.SkipStatLifeMax) return;
 
-        foreach (var pIndex in Players)
+        var stats = StatsManager.GetStats(plr);
+        var elapsed = (DateTime.Now - stats.LastGiftSendTime).TotalSeconds;
+
+        if (elapsed >= Config.SendTimer)
         {
-            var plr = TShock.Players[pIndex];
-            if (plr is null || !plr.Active || !plr.IsLoggedIn ||
-                plr.TPlayer.statLifeMax < Config.SkipStatLifeMax) continue;
-
-            players[pIndex]++;
-            if (players[pIndex] < Config.SendTimer * 60) continue;
-
-            GiftData gift = RandGift();
-            if (gift is null) continue;
+            GiftData gift = RandGift(plr);
+            if (gift is null) return;
 
             int stack = Main.rand.Next(gift.Stack[0], gift.Stack[1]);
             plr.GiveItem(gift.ItemType, stack);
             string item = string.Format(" [i/s{0}:{1}] ", stack, gift.ItemType);
 
-            // 重置玩家计时器
-            players[pIndex] = 0;
+            // 更新玩家统计（获得礼包）
+            StatsManager.UpdateStats(plr, 1);
 
-            // 计算剩余时间（帧数）并格式化显示
-            string nextTime = FormatTime(Config.SendTimer * 60);
+            // 计算剩余时间并格式化显示
+            string nextTime = FormatTime(Config.SendTimer);
             plr.SendMessage($"{Config.Text} {item} 下次发放将在[c/F38152:{nextTime}]后", color);
         }
     }
     #endregion
 
     #region 格式化时间显示
-    public static string FormatTime(int frames)
+    public static string FormatTime(int seconds)
     {
-        // 将帧数转换为秒数（60帧=1秒）
-        int s = frames / 60;
-
-        if (s < 60)
-            return $"{s}秒";
-        else if (s < 3600)
-            return $"{s / 60}分钟";
-        else if (s < 86400)
-            return $"{s / 3600}小时";
+        if (seconds < 60)
+            return $"{seconds}秒";
+        else if (seconds < 3600)
+            return $"{seconds / 60}分钟";
+        else if (seconds < 86400)
+            return $"{seconds / 3600}小时";
         else
-            return $"{s / 86400}天";
+            return $"{seconds / 86400}天";
     }
     #endregion
 
-    #region 随机选取礼包的方法
-    public GiftData RandGift()
+    #region 随机选取礼包的方法（添加条件检查）
+    public static GiftData RandGift(TSPlayer player)
     {
         if (Config is null || !Config.Enabled) return null;
 
-        int index = Main.rand.Next(Config.Total);
-        int sum = 0;
+        // 首先筛选出满足条件的礼包
+        var AvailGifts = new List<GiftData>();
+        var AvailRates = new List<int>();
+        int TotalRate = 0;
 
         for (int i = 0; i < Config.GiftList.Count; i++)
         {
-            sum += Config.GiftList[i].Rate;
+            var gift = Config.GiftList[i];
+
+            // 检查条件
+            if (gift.Conditions == null || gift.Conditions.Count == 0 || Condition.CheckGroup(player.TPlayer, gift.Conditions))
+            {
+                AvailGifts.Add(gift);
+                AvailRates.Add(gift.Rate);
+                TotalRate += gift.Rate;
+            }
+        }
+
+        // 如果没有可用的礼包，返回null
+        if (AvailGifts.Count == 0 || TotalRate == 0)
+        {
+            return null;
+        }
+
+        // 在可用的礼包中随机选择
+        int index = Main.rand.Next(TotalRate);
+        int sum = 0;
+
+        for (int i = 0; i < AvailGifts.Count; i++)
+        {
+            sum += AvailRates[i];
             if (index < sum)
             {
-                return Config.GiftList[i];
+                return AvailGifts[i];
             }
         }
         return null;
-    } 
+    }
     #endregion
+
 }

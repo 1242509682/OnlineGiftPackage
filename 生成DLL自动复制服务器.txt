@@ -1,5 +1,5 @@
 copy bin\Release\net6.0\OnlineGift.dll C:\Users\羽学\Desktop\TShock5\ServerPlugins
-del C:\Users\羽学\Desktop\TShock5\tshock\在线礼包.json
+del C:\Users\羽学\Desktop\TShock5\tshock\在线礼包\礼包配置.json
 taskkill /F /IM TShock.Server.exe
 
 
