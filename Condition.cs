@@ -1,4 +1,5 @@
 ﻿using Terraria;
+using Terraria.ID;
 using Terraria.GameContent.Events;
 using TShockAPI;
 
@@ -33,23 +34,38 @@ internal class Condition
             case "鹿角怪":
                 return NPC.downedDeerclops;
             case "克脑":
-            case "世吞":
-            case "世界吞噬者":
+            case "脑子":
             case "克苏鲁之脑":
+                return NPC.downedBoss2 && IsDefeated(NPCID.BrainofCthulhu);
+            case "世吞":
+            case "黑长直":
+            case "世界吞噬者":
             case "世界吞噬怪":
+                return NPC.downedBoss2 &&
+                       (IsDefeated(NPCID.EaterofWorldsHead) ||
+                        IsDefeated(NPCID.EaterofWorldsBody) ||
+                        IsDefeated(NPCID.EaterofWorldsTail));
+            case "邪恶boss2":
+            case "击败世吞克脑任意一个":
                 return NPC.downedBoss2;
             case "蜂王":
                 return NPC.downedQueenBee;
+            case "吴克":
             case "骷髅王":
                 return NPC.downedBoss3;
             case "困难模式":
+            case "肉山":
             case "肉后":
             case "血肉墙":
                 return Main.hardMode;
             case "毁灭者":
+            case "铁长直":
                 return NPC.downedMechBoss1;
+            case "双子眼":
             case "双子魔眼":
                 return NPC.downedMechBoss2;
+            case "铁吴克":
+            case "机械吴克":
             case "机械骷髅王":
                 return NPC.downedMechBoss3;
             case "世纪之花":
@@ -68,9 +84,12 @@ internal class Condition
             case "猪鲨":
             case "猪龙鱼公爵":
                 return NPC.downedFishron;
+            case "拜月":
+            case "拜月教":
             case "教徒":
             case "拜月教邪教徒":
                 return NPC.downedAncientCultist;
+            case "月总":
             case "月亮领主":
                 return NPC.downedMoonlord;
             case "哀木":
@@ -196,21 +215,23 @@ internal class Condition
         // Boss相关条件
         ["史莱姆王"] = new List<string> { "史莱姆王", "史王" },
         ["克苏鲁之眼"] = new List<string> { "克眼", "克苏鲁之眼" },
-        ["世界吞噬者"] = new List<string> { "克脑", "世吞", "世界吞噬者", "克苏鲁之脑", "世界吞噬怪" },
-        ["骷髅王"] = new List<string> { "骷髅王" },
+        ["邪恶boss2"] = new List<string> { "击败世吞克脑任意一个" },
+        ["克苏鲁之脑"] = new List<string> { "克脑", "脑子","克苏鲁之脑"},
+        ["世界吞噬怪"] = new List<string> { "世吞", "黑长直", "世界吞噬者","世界吞噬怪" },
+        ["骷髅王"] = new List<string> { "吴克","骷髅王" },
         ["蜂王"] = new List<string> { "蜂王" },
-        ["血肉墙"] = new List<string> { "困难模式", "肉后", "血肉墙" },
+        ["血肉墙"] = new List<string> { "困难模式", "肉后","肉山", "血肉墙" },
         ["机械boss"] = new List<string> { "一王后" },
-        ["毁灭者"] = new List<string> { "毁灭者" },
-        ["双子魔眼"] = new List<string> { "双子魔眼" },
-        ["机械骷髅王"] = new List<string> { "机械骷髅王" },
+        ["毁灭者"] = new List<string> { "铁长直","毁灭者" },
+        ["双子魔眼"] = new List<string> { "双子眼","双子魔眼" },
+        ["机械骷髅王"] = new List<string> { "铁吴克","机械骷髅王" },
         ["三机械boss"] = new List<string> { "三王后" },
         ["世纪之花"] = new List<string> { "世纪之花", "花后", "世花" },
         ["石巨人"] = new List<string> { "石后", "石巨人" },
         ["史莱姆皇后"] = new List<string> { "史后", "史莱姆皇后" },
         ["光之女皇"] = new List<string> { "光之女皇", "光女" },
         ["猪龙鱼公爵"] = new List<string> { "猪鲨", "猪龙鱼公爵" },
-        ["拜月教邪教徒"] = new List<string> { "教徒", "拜月教邪教徒" },
+        ["拜月教邪教徒"] = new List<string> { "教徒","拜月","拜月教", "拜月教邪教徒" },
         ["月亮领主"] = new List<string> { "月亮领主" },
 
         // 事件相关条件
@@ -274,4 +295,12 @@ internal class Condition
         ["神庙"] = new List<string> { "神庙" },
         ["天空"] = new List<string> { "天空" }
     };
+
+    #region 是否解锁怪物图鉴以达到解锁物品掉落的程度（用于独立判断克脑、世吞）
+    private static bool IsDefeated(int type)
+    {
+        var unlockState = Main.BestiaryDB.FindEntryByNPCID(type).UIInfoProvider.GetEntryUICollectionInfo().UnlockState;
+        return unlockState == Terraria.GameContent.Bestiary.BestiaryEntryUnlockState.CanShowDropsWithDropRates_4;
+    } 
+    #endregion
 }
